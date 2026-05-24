@@ -14,7 +14,16 @@ export default function App() {
   >("home");
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [info, setInfo] = useState<BarangayInfo | null>(null);
+  const [info, setInfo] = useState<BarangayInfo>({
+    id: "",
+    name: "Barangay 17 - Rizal Street (Ilawod)",
+    municipality: "Legazpi City",
+    province: "Albay",
+    contact_number: "",
+    email: "",
+    vision: "",
+    mission: "",
+  });
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [events, setEvents] = useState<Event[]>([]);
   const [services, setServices] = useState<BarangayService[]>([]);

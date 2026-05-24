@@ -3,6 +3,9 @@ export interface BarangayInfo {
   name: string;
   vision: string;
   mission: string;
+  municipality: string;
+  province: string;
+  email: string;
   contact_number: string;
 }
 
@@ -50,5 +53,5 @@ export interface Announcement {
   content: string;
   priority: 'Low' | 'Normal' | 'High';
   status: 'Draft' | 'Published';
-  created_at: string;
+  date_published: string; // <-- Changed from created_at to match App.tsx line 279
 }

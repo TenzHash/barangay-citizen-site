@@ -42,3 +42,13 @@ export interface CitizenDocumentRequest {
   status: 'Pending' | 'Approved' | 'Rejected' | 'Ready';
   requested_at: string;
 }
+
+// Add this interface right at the bottom of the file
+export interface Announcement {
+  id: string;
+  title: string;
+  content: string;
+  priority: 'Low' | 'Normal' | 'High';
+  status: 'Draft' | 'Published';
+  created_at: string;
+}

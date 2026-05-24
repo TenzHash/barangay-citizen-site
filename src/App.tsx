@@ -149,41 +149,44 @@ export default function App() {
   return (
     <div className="min-h-screen w-full bg-slate-50 flex flex-col font-sans select-none antialiased overflow-x-hidden">
       {/* 1. INSTITUTIONAL NAVIGATION BAR */}
-      <header className="w-full bg-slate-900 text-white shadow-sm z-30 sticky top-0 border-b border-white/5">
-        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 min-h-20 flex flex-col md:flex-row md:items-center md:justify-between py-4 md:py-0 gap-4 md:gap-0">
-          <div className="flex items-center gap-3.5">
+      <header className="w-full bg-slate-900 text-white shadow-md z-30 sticky top-0 border-b border-slate-800 shrink-0">
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
+          {/* LEFT SIDE: BRANDING BLOCK */}
+          <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-9 h-9 rounded-xl bg-white text-slate-900 font-black text-sm flex items-center justify-center shadow-md shrink-0">
               RP
             </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-sm sm:text-base font-black tracking-tight text-white truncate max-w-[200px] sm:max-w-none">
+            <div className="min-w-0 flex flex-col justify-center">
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <h1 className="text-sm sm:text-base font-black tracking-tight text-white truncate max-w-[180px] sm:max-w-none">
                   {currentInfo.name}
                 </h1>
-                <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-mono shrink-0">
-                  Live Portal
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
+                    Live Portal
+                  </span>
 
-                {/* IN-APP PWA INSTALLATION TRIGGER OPTION */}
-                {showInstallBtn && (
-                  <button
-                    onClick={handleInstallApp}
-                    className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-900 px-2.5 py-1 rounded-md animate-pulse cursor-pointer hover:bg-amber-400 transition-all border-none outline-none"
-                  >
-                    I-install sa Telepono
-                  </button>
-                )}
+                  {/* PWA INSTALL BUTTON (Conditionally Rendered smoothly inline) */}
+                  {showInstallBtn && (
+                    <button
+                      onClick={handleInstallApp}
+                      className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-900 px-2.5 py-1 rounded-md animate-pulse cursor-pointer hover:bg-amber-400 transition-all border-none outline-none"
+                    >
+                      I-install sa Telepono
+                    </button>
+                  )}
+                </div>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide truncate">
+              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide truncate mt-0.5">
                 {currentInfo.municipality}, {currentInfo.province}
               </p>
             </div>
           </div>
 
-          {/* DESKTOP LINK MENU */}
-          <nav className="hidden md:flex items-center gap-1 h-full text-xs font-bold uppercase tracking-wider self-stretch">
+          {/* RIGHT SIDE: DESKTOP NAVIGATION MENU */}
+          <nav className="hidden md:flex items-center gap-1 h-full text-xs font-bold uppercase tracking-wider shrink-0">
             {[
-              { id: "home", label: "Tahanan (Home)" },
+              { id: "home", label: "Tahanan" },
               { id: "news", label: "Mga Anunsyo" },
               { id: "events", label: "Iskedyul" },
               { id: "services", label: "Mga Serbisyo" },
@@ -194,10 +197,10 @@ export default function App() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`px-4 py-3 rounded-xl cursor-pointer transition-all border-none bg-transparent outline-none ${
+                  className={`px-4 py-2.5 rounded-xl cursor-pointer transition-all border-none bg-transparent outline-none ${
                     isActive
                       ? "bg-white/10 text-white font-extrabold shadow-inner border-b-2 border-slate-300"
-                      : "text-slate-300 hover:text-white hover:bg-white/5"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
                   }`}
                 >
                   {tab.label}

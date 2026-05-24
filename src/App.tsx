@@ -418,7 +418,7 @@ export default function App() {
 
           {/* TAB 5: COUNCIL REGISTER (3-COLUMN ALIGNED ROSTER BLOCK) */}
           {activeTab === "council" && (
-            <div className="space-y-6 max-w-6xl mx-auto fade-in-view text-xs font-medium">
+            <div className="space-y-6 fade-in-view text-xs">
               <div className="border-b border-slate-200/80 pb-3">
                 <h3 className="text-sm font-bold uppercase tracking-wider text-gov-darkText">
                   Sangguniang Barangay Directory

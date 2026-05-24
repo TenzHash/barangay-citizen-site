@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-gov-navy: #091e36;
+  --color-gov-blue: #0f3a60;
+  --color-gov-accent: #b0c4de;
+  --color-gov-light: #f4f7fa;
+  --color-gov-darkText: #0f172a;
+
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+  @apply bg-slate-50/50 text-slate-900 antialiased font-sans flex justify-center min-h-screen;
+}
+
+/* Smooth active view transitions */
+.fade-in-view {
+  @apply animate-[fadeIn_0.2s_ease-out];
+}

@@ -37,17 +37,20 @@ export default function App() {
 
   // 1. PWA Browser Prompt Capture Hook
   useEffect(() => {
-    const handleBeforeInstallPrompt = (e: Event) => {
+    const handleBeforeInstallPrompt = (e: any) => {
       e.preventDefault();
       setDeferredPrompt(e);
       setShowInstallBtn(true);
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    window.addEventListener(
+      "beforeinstallprompt" as any,
+      handleBeforeInstallPrompt,
+    );
 
     return () => {
       window.removeEventListener(
-        "beforeinstallprompt",
+        "beforeinstallprompt" as any,
         handleBeforeInstallPrompt,
       );
     };

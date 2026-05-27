@@ -8,7 +8,17 @@ import type {
   BarangayService,
 } from "./types";
 
-// Define strict types for the local state container
+// Explicit custom interface for the experimental PWA installation banner tracking to keep ESLint green
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
+// Strict mapping for allowed menu navigation keys
 type TabId = "home" | "news" | "events" | "services" | "council";
 
 interface TabItem {
@@ -17,11 +27,12 @@ interface TabItem {
 }
 
 export default function App() {
-  // PWA Installation States
+  // PWA Installation Engine States
   const [showInstallBtn, setShowInstallBtn] = useState<boolean>(false);
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [deferredPrompt, setDeferredPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
 
-  // Core Layout States
+  // Core Layout Navigation States
   const [activeTab, setActiveTab] = useState<TabId>("home");
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -34,7 +45,7 @@ export default function App() {
   const [purpose, setPurpose] = useState<string>("");
   const [submittingRequest, setSubmittingRequest] = useState<boolean>(false);
 
-  // Database Structured State Objects
+  // Core Public-Facing State Context Objects
   const [info, setInfo] = useState<BarangayInfo>({
     id: "",
     name: "Barangay 17 - Rizal Street (Ilawod)",
@@ -50,11 +61,11 @@ export default function App() {
   const [services, setServices] = useState<BarangayService[]>([]);
   const [officials, setOfficials] = useState<Official[]>([]);
 
-  // 1. Capture PWA Browser Prompt
+  // 1. Capture PWA Browser System Prompts
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      setDeferredPrompt(e);
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
       setShowInstallBtn(true);
     };
 
@@ -66,7 +77,7 @@ export default function App() {
       );
   }, []);
 
-  // 2. Data Fetch Interceptor
+  // 2. Real-Time Public Content Fetch Loop
   useEffect(() => {
     async function loadLiveCitizenData() {
       try {
@@ -77,7 +88,7 @@ export default function App() {
           supabase
             .from("announcements")
             .select("*")
-            .order("date_published", { ascending: false }),
+            .order("created_at", { ascending: false }),
           supabase
             .from("events")
             .select("*")
@@ -98,7 +109,7 @@ export default function App() {
         if (srvRes.data) setServices(srvRes.data);
         if (offRes.data) setOfficials(offRes.data);
       } catch (err) {
-        console.error("Citizen site data fetch failure:", err);
+        console.error("Citizen site data stream fetch failure:", err);
       } finally {
         setLoading(false);
       }
@@ -107,7 +118,7 @@ export default function App() {
     loadLiveCitizenData();
   }, []);
 
-  // Submit Document Request Handler
+  // 3. Document Clearance Entry Creation Handler
   const handleCreateRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedService) return;
@@ -118,10 +129,10 @@ export default function App() {
       const { error } = await supabase.from("document_requests").insert([
         {
           service_id: selectedService.id,
-          resident_first_name: firstName,
-          resident_last_name: lastName,
-          contact_number: contactNumber,
-          purpose: purpose,
+          resident_first_name: firstName.trim(),
+          resident_last_name: lastName.trim(),
+          contact_number: contactNumber.trim(),
+          purpose: purpose.trim(),
           status: "Pending",
         },
       ]);
@@ -132,23 +143,23 @@ export default function App() {
         "Ang inyong hiling ay matagumpay na naipadala! Makakatanggap kayo ng SMS notification kapag handa na ito para sa pickup.",
       );
 
-      // Reset Form Fields
+      // Clear Form Fields on Resolution Success
       setFirstName("");
       setLastName("");
       setContactNumber("");
       setPurpose("");
       setSelectedService(null);
     } catch (err) {
-      console.error("Error submitting document request:", err);
+      console.error("Error creating entry row:", err);
       alert("May naganap na kamalian sa pagpapadala. Pakisubukang muli.");
     } finally {
       setSubmittingRequest(false);
     }
   };
 
-  const handleInstallApp = async () => {
+  const handleInstallAppClick = async () => {
     if (!deferredPrompt) return;
-    deferredPrompt.prompt();
+    await deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === "accepted") setShowInstallBtn(false);
     setDeferredPrompt(null);
@@ -156,22 +167,15 @@ export default function App() {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full bg-slate-50 flex flex-col items-center justify-center text-[10px] font-mono font-bold tracking-widest text-slate-400 uppercase">
-        <div className="animate-pulse">Connecting to LGU Network Core...</div>
+      <div className="min-h-screen w-full bg-slate-900 flex flex-col items-center justify-center text-[10px] font-mono font-bold tracking-widest text-slate-500 uppercase">
+        <div className="animate-pulse">
+          Connecting to Citizen Portal Node...
+        </div>
       </div>
     );
   }
 
-  const currentInfo = info || {
-    name: "Barangay 17 - Rizal Street (Ilawod)",
-    municipality: "Legazpi City",
-    province: "Albay",
-    contact_number: "(052) 742-1717",
-    email: "bgy17.ilawod@legazpi.gov.ph",
-    vision: "Isang maunlad, mapayapa, at luntian na pamayanan...",
-    mission: "Ihatid ang mabilis at de-kalidad na serbisyo publiko...",
-  };
-
+  // Filter datasets safely based on live configurations
   const publicAnnouncements = announcements.filter(
     (a) => !a.status || a.status === "Published",
   );
@@ -179,7 +183,7 @@ export default function App() {
     (e) => !e.status || e.status === "Upcoming" || e.status === "Ongoing",
   );
 
-  // Inclusive Protocol Sorting Engine for Council Members
+  // Inclusive Protocol Sorting Engine for Sangguniang Barangay Council Array Rendering
   const activeOfficials = officials
     .filter((o) => !o.status || o.status === "Active")
     .sort((a, b) => {
@@ -195,10 +199,10 @@ export default function App() {
       const weightA = getPositionWeight(a.position);
       const weightB = getPositionWeight(b.position);
       if (weightA !== weightB) return weightA - weightB;
-      return (
-        new Date(a.created_at || 0).getTime() -
-        new Date(b.created_at || 0).getTime()
-      );
+
+      const nameA = a.name || "";
+      const nameB = b.name || "";
+      return nameA.localeCompare(nameB);
     });
 
   const navigationTabs: TabItem[] = [
@@ -211,44 +215,49 @@ export default function App() {
 
   return (
     <div className="min-h-screen w-full bg-slate-50 flex flex-col font-sans select-none antialiased overflow-x-hidden">
-      {/* 1. HEADER BRANDING & NAVIGATION */}
-      <header className="w-full bg-slate-900 text-white shadow-md z-30 sticky top-0 border-b border-slate-800 shrink-0">
-        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-white text-slate-900 font-black text-sm flex items-center justify-center shadow-md shrink-0">
-              RP
+      {/* 1. SECURED SYSTEM HEADER BRANDING */}
+      <header className="w-full bg-slate-900 text-white shadow-md z-30 sticky top-0 border-b border-white/5 shrink-0">
+        <div className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-white/10 text-white font-black text-xs flex items-center justify-center border border-white/5 shrink-0">
+              CDL
             </div>
-            <div className="min-w-0 flex flex-col justify-center">
+            <div className="min-w-0 flex flex-col">
               <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                <h1 className="text-sm sm:text-base font-black tracking-tight text-white truncate max-w-[180px] sm:max-w-none">
-                  {currentInfo.name}
+                <h1 className="text-xs font-black tracking-tight text-white truncate max-w-[160px] sm:max-w-none uppercase">
+                  {info.name}
                 </h1>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[8px] font-extrabold uppercase tracking-widest text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded font-mono">
-                    Live Portal
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <span className="text-[8px] font-extrabold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded font-mono">
+                    Citizen Link
                   </span>
                   {showInstallBtn && (
                     <button
-                      onClick={handleInstallApp}
-                      className="text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-900 px-2.5 py-1 rounded-md animate-pulse cursor-pointer border-none outline-none"
+                      onClick={handleInstallAppClick}
+                      className="text-[8px] font-black uppercase tracking-wider bg-emerald-500 text-white px-2 py-1 rounded border-none outline-none cursor-pointer shadow-sm active:scale-95 transition-all"
                     >
-                      I-install
+                      I-install PWA
                     </button>
                   )}
                 </div>
               </div>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide truncate mt-0.5">
-                {currentInfo.municipality}, {currentInfo.province}
+              <p className="text-[9px] text-slate-400 font-bold tracking-wide uppercase truncate mt-0.5">
+                {info.municipality} • {info.province}
               </p>
             </div>
           </div>
 
-          <nav className="hidden md:flex items-center gap-1 h-full text-xs font-bold uppercase tracking-wider shrink-0">
+          {/* DESKTOP ROW TABS */}
+          <nav className="hidden md:flex items-center gap-1 text-[11px] font-black uppercase tracking-wider shrink-0">
             {navigationTabs.map((tab) => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2.5 rounded-xl cursor-pointer transition-all border-none bg-transparent outline-none ${activeTab === tab.id ? "bg-white/10 text-white font-extrabold shadow-inner border-b-2 border-slate-300" : "text-slate-400 hover:text-white hover:bg-white/5"}`}
+                className={`px-4 py-2 rounded-xl cursor-pointer transition-all border-none bg-transparent outline-none ${
+                  activeTab === tab.id
+                    ? "bg-white/10 text-white shadow-inner"
+                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                }`}
               >
                 {tab.label}
               </button>
@@ -257,59 +266,65 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. MAIN WORKSPACE VIEW */}
-      <div className="w-full flex-1 bg-slate-50/40 pb-24 md:pb-8">
+      {/* 2. CORE WORKSPACE SURFACE CONTROLLER */}
+      <div className="w-full flex-1 bg-slate-100/60 pb-24 md:pb-8">
         <main className="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          {/* HOME TAB */}
+          {/* TAHANAN (HOME) SECTION */}
           {activeTab === "home" && (
             <div className="flex flex-col lg:flex-row gap-6 items-start text-xs w-full">
               <div className="w-full lg:w-2/3 space-y-6 min-w-0">
-                <div className="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-2xl p-6 shadow-sm border border-white/5 space-y-4">
+                <div className="bg-slate-900 text-white rounded-2xl p-6 shadow-md border border-white/5 space-y-5">
                   <div>
-                    <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">
+                    <h3 className="text-[9px] font-black uppercase tracking-widest text-emerald-400 font-mono">
                       Aming Pananaw (Vision)
                     </h3>
-                    <p className="text-xs sm:text-sm italic leading-relaxed mt-2 font-light text-slate-200">
-                      "{currentInfo.vision}"
+                    <p className="text-xs sm:text-sm italic leading-relaxed mt-2 font-medium text-slate-200">
+                      "
+                      {info.vision ||
+                        "Isang maunlad, mapayapa, at luntian na pamayanan..."}
+                      "
                     </p>
                   </div>
-                  <div className="pt-4 border-t border-white/10">
-                    <h3 className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400">
+                  <div className="pt-4 border-t border-white/5">
+                    <h3 className="text-[9px] font-black uppercase tracking-widest text-emerald-400 font-mono">
                       Tungkulin (Mission)
                     </h3>
-                    <p className="text-xs sm:text-sm italic leading-relaxed mt-2 font-light text-slate-200">
-                      "{currentInfo.mission}"
+                    <p className="text-xs sm:text-sm italic leading-relaxed mt-2 font-medium text-slate-200">
+                      "
+                      {info.mission ||
+                        "Ihatid ang mabilis at de-kalidad na serbisyo publiko..."}
+                      "
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-white rounded-2xl p-6 border border-slate-200/60 shadow-2xs space-y-4">
-                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-4">
+                  <h3 className="text-[9px] font-black uppercase tracking-widest text-slate-400 font-mono">
                     Mabilisang Aksyon para sa Mamamayan
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
                       onClick={() => setActiveTab("services")}
-                      className="bg-slate-50/60 hover:bg-slate-100/80 border border-slate-200/60 rounded-2xl p-5 text-left cursor-pointer transition-all shadow-2xs outline-none"
+                      className="bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl p-5 text-left cursor-pointer transition-all shadow-2xs outline-none group"
                     >
-                      <div className="font-bold text-slate-800 text-xs">
-                        Mag-request ng Dokumento
+                      <div className="font-black text-slate-900 text-xs uppercase tracking-tight group-hover:text-blue-600 transition-colors">
+                        Mag-request ng Dokumento →
                       </div>
-                      <div className="text-[11px] text-slate-400 mt-1.5 font-medium leading-normal">
+                      <div className="text-[11px] text-slate-500 mt-1.5 font-semibold leading-normal">
                         Kumuha ng Barangay Clearance, Indigency, at Certificates
-                        online.
+                        online gamit ang form.
                       </div>
                     </button>
                     <button
                       onClick={() => setActiveTab("news")}
-                      className="bg-slate-50/60 hover:bg-slate-100/80 border border-slate-200/60 rounded-2xl p-5 text-left cursor-pointer transition-all shadow-2xs outline-none"
+                      className="bg-slate-50 hover:bg-slate-100/80 border border-slate-200 rounded-2xl p-5 text-left cursor-pointer transition-all shadow-2xs outline-none"
                     >
-                      <div className="font-bold text-slate-800 text-xs">
+                      <div className="font-black text-slate-900 text-xs uppercase tracking-tight">
                         Tingnan ang mga Anunsyo
                       </div>
-                      <div className="text-[11px] text-blue-600 font-bold mt-1.5 font-mono">
-                        {publicAnnouncements.length} Aktibong Balita sa
-                        Pamayanan.
+                      <div className="text-[11px] text-blue-600 font-black mt-1.5 font-mono uppercase tracking-wide">
+                        ● {publicAnnouncements.length} Aktibong Balita sa
+                        Pamayanan
                       </div>
                     </button>
                   </div>
@@ -317,193 +332,222 @@ export default function App() {
               </div>
 
               <div className="w-full lg:w-1/3 space-y-4">
-                <div className="bg-rose-50/60 border border-rose-100 rounded-2xl p-5 space-y-2.5">
-                  <span className="text-[9px] font-extrabold text-rose-800 uppercase tracking-widest block">
+                <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
+                  <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest block font-mono">
                     Emergency Desk Hotline
                   </span>
-                  <div className="text-base font-mono font-black text-rose-700">
-                    {currentInfo.contact_number}
+                  <div className="text-base font-mono font-black text-slate-900 border-b border-slate-100 pb-2">
+                    {info.contact_number || "Not Available"}
                   </div>
-                  <div className="text-[11px] text-rose-600 font-medium truncate">
-                    {currentInfo.email}
+                  <div className="text-[11px] text-slate-500 font-semibold truncate">
+                    {info.email || "No Official Email Registered"}
                   </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* ANNOUNCEMENTS TAB */}
+          {/* MGA ANUNSYO (ANNOUNCEMENTS) SECTION */}
           {activeTab === "news" && (
-            <div className="space-y-6 max-w-4xl mx-auto text-xs font-medium w-full">
-              <div className="border-b border-slate-200/80 pb-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            <div className="space-y-4 max-w-3xl mx-auto text-xs w-full">
+              <div className="border-b border-slate-200 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
                   Mga Kasalukuyang Anunsyo
                 </h3>
               </div>
-              {publicAnnouncements.map((ann) => (
-                <div
-                  key={ann.id}
-                  className="bg-white rounded-2xl p-5 border border-slate-200/60 shadow-2xs space-y-3 w-full min-w-0"
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <h4 className="text-sm font-black text-slate-900 leading-snug">
-                      {ann.title}
-                    </h4>
-                    {ann.priority === "High" && (
-                      <span className="bg-rose-50 text-rose-700 font-extrabold text-[8px] px-2.5 py-1 rounded-md border border-rose-100 uppercase tracking-wider shrink-0">
-                        Urgent
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-slate-600 leading-relaxed font-medium text-[12px] break-words">
-                    {ann.content}
-                  </p>
+              {publicAnnouncements.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border text-slate-400 font-bold font-mono">
+                  Walang nakalathalang anunsyo sa kasalukuyan.
                 </div>
-              ))}
+              ) : (
+                publicAnnouncements.map((ann) => (
+                  <div
+                    key={ann.id}
+                    className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm space-y-3 w-full min-w-0"
+                  >
+                    <div className="flex justify-between items-start gap-4">
+                      <h4 className="text-sm font-black text-slate-900 tracking-tight leading-snug">
+                        {ann.title}
+                      </h4>
+                      {ann.priority === "High" && (
+                        <span className="bg-rose-500/10 text-rose-600 font-black text-[8px] px-2.5 py-0.5 rounded border border-rose-500/20 uppercase tracking-widest font-mono shrink-0">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 leading-relaxed font-semibold text-[12px] break-words whitespace-pre-wrap">
+                      {ann.content}
+                    </p>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
-          {/* SCHEDULES TAB */}
+          {/* ISKEDYUL (SCHEDULES) SECTION */}
           {activeTab === "events" && (
-            <div className="space-y-6 text-xs font-medium w-full">
-              <div className="border-b border-slate-200/80 pb-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            <div className="space-y-4 text-xs w-full">
+              <div className="border-b border-slate-200 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
                   Iskedyul at Programa
                 </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
-                {activeEvents.map((evt) => (
-                  <div
-                    key={evt.id}
-                    className="bg-white rounded-2xl p-5 border border-slate-200/80 border-l-4 border-l-blue-600 shadow-sm flex flex-col justify-between space-y-4 min-w-0"
-                  >
-                    <h4 className="text-sm font-black text-slate-800 leading-tight break-words">
-                      {evt.title}
-                    </h4>
-                    <p className="text-slate-500 text-[11px] font-normal break-words">
-                      {evt.description}
-                    </p>
-                    <div className="text-[11px] text-slate-400 font-mono bg-slate-50 p-2 rounded border">
-                      {evt.event_date} | {evt.venue}
+              {activeEvents.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border text-slate-400 font-bold font-mono">
+                  Walang nakatakdang aktibidad sa kasalukuyan.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                  {activeEvents.map((evt) => (
+                    <div
+                      key={evt.id}
+                      className="bg-white rounded-2xl p-5 border border-slate-200 border-l-4 border-l-blue-600 shadow-sm flex flex-col justify-between space-y-4 min-w-0"
+                    >
+                      <div className="space-y-1.5">
+                        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-tight break-words">
+                          {evt.title}
+                        </h4>
+                        <p className="text-slate-500 text-[11px] font-medium leading-relaxed break-words">
+                          {evt.description}
+                        </p>
+                      </div>
+                      <div className="text-[10px] text-slate-600 font-mono font-bold bg-slate-50 border p-2.5 rounded-xl flex flex-col gap-1">
+                        <div>📅 DATE: {evt.event_date}</div>
+                        <div className="truncate">📍 VENUE: {evt.venue}</div>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* SERVICES TAB WITH DISPATCH REQUEST BUTTON TRIGGER */}
+          {/* MGA SERBISYO (SERVICES) SECTION - DESIGNED REMOVING WASHED BLENDS */}
           {activeTab === "services" && (
             <div className="space-y-6 text-xs w-full">
-              <div className="border-b border-slate-200/80 pb-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+              <div className="border-b border-slate-200 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
                   Online Documentation Hub
                 </h3>
-                <p className="text-slate-400 text-[11px] font-normal mt-0.5">
-                  Pumili ng kailangang dokumento sa ibaba para mag-aplay online.
+                <p className="text-slate-400 text-[11px] font-medium mt-0.5">
+                  Pumili ng kailangang dokumento sa ibaba para mag-aplay online
+                  nang mabilis.
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
-                {services.map((srv) => (
-                  <div
-                    key={srv.id}
-                    className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-2xs flex flex-col justify-between space-y-4 min-w-0"
-                  >
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-black text-slate-800 leading-tight break-words">
-                        {srv.name}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 leading-relaxed font-medium break-words">
-                        {srv.description}
-                      </p>
-                    </div>
-                    <div className="space-y-3">
-                      <div className="grid grid-cols-2 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 border border-slate-100 font-medium gap-2">
-                        <div>
-                          Bayad:{" "}
-                          <span className="font-bold text-blue-600 block text-xs mt-0.5">
-                            {srv.fees}
-                          </span>
-                        </div>
-                        <div>
-                          Pagproseso:{" "}
-                          <span className="font-bold text-slate-700 block text-xs font-mono mt-0.5">
-                            {srv.processing_time}
-                          </span>
-                        </div>
+              {services.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border text-slate-400 font-bold font-mono">
+                  Walang nakalistang serbisyo sa kasalukuyan.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 w-full">
+                  {services.map((srv) => (
+                    <div
+                      key={srv.id}
+                      className="bg-white border border-slate-200 shadow-sm rounded-2xl p-6 flex flex-col justify-between space-y-5 min-w-0 hover:border-slate-300 transition-all"
+                    >
+                      <div className="space-y-2">
+                        <h4 className="text-sm font-black text-slate-900 tracking-tight leading-tight break-words">
+                          {srv.name}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 leading-relaxed font-semibold break-words">
+                          {srv.description}
+                        </p>
                       </div>
-                      <button
-                        onClick={() => setSelectedService(srv)}
-                        className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider rounded-xl transition-all border-none outline-none cursor-pointer text-center"
-                      >
-                        Mag-apply sa Dokumentong Ito
-                      </button>
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-2 bg-slate-50 rounded-xl p-3 text-[10px] text-slate-500 border border-slate-200/60 font-bold gap-4">
+                          <div>
+                            BAYAD (FEES):{" "}
+                            <span className="font-black text-blue-600 block text-xs mt-0.5">
+                              {srv.fees}
+                            </span>
+                          </div>
+                          <div>
+                            PROSESO (TIME):{" "}
+                            <span className="font-black text-slate-700 block text-xs font-mono mt-0.5">
+                              {srv.processing_time}
+                            </span>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setSelectedService(srv)}
+                          className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-black text-xs uppercase tracking-wider rounded-xl transition-all border-none outline-none cursor-pointer text-center"
+                        >
+                          Mag-apply sa Dokumentong Ito
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          {/* COUNCIL DIRECTORY TAB */}
+          {/* KONSEHO (COUNCIL DIRECTORY) SECTION */}
           {activeTab === "council" && (
-            <div className="space-y-6 text-xs w-full">
-              <div className="border-b border-slate-200/80 pb-3">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-slate-800">
+            <div className="space-y-4 text-xs w-full">
+              <div className="border-b border-slate-200 pb-3">
+                <h3 className="text-xs font-black uppercase tracking-wider text-slate-800 font-mono">
                   Sangguniang Barangay Directory
                 </h3>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
-                {activeOfficials.map((off) => (
-                  <div
-                    key={off.id}
-                    className="bg-white rounded-2xl p-4.5 border border-slate-200/80 shadow-2xs flex flex-col justify-between gap-3 min-w-0"
-                  >
-                    <div>
-                      <div className="font-black text-slate-800 text-sm tracking-tight break-words">
-                        {off.name}
+              {activeOfficials.length === 0 ? (
+                <div className="bg-white rounded-2xl p-12 text-center border text-slate-400 font-bold font-mono">
+                  Walang nakatalang opisyal sa kasalukuyan.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
+                  {activeOfficials.map((off) => (
+                    <div
+                      key={off.id}
+                      className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col justify-between gap-4 min-w-0"
+                    >
+                      <div>
+                        <div className="font-black text-slate-900 text-sm tracking-tight break-words">
+                          {off.name}
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-mono mt-1 font-bold uppercase tracking-wider">
+                          Term: {off.term_start} - {off.term_end}
+                        </div>
                       </div>
-                      <div className="text-[10px] text-slate-400 font-mono mt-1 font-semibold">
-                        Term: {off.term_start} - {off.term_end}
+                      <div className="pt-2 border-t border-slate-100 flex justify-between items-center gap-4 min-w-0">
+                        <span className="text-[9px] uppercase font-bold text-slate-400 tracking-wider font-mono shrink-0">
+                          Katungkulan:
+                        </span>
+                        <span className="text-[11px] bg-slate-50 text-blue-600 border border-slate-200/60 font-black px-3 py-1 rounded-xl truncate font-mono">
+                          {off.position}
+                        </span>
                       </div>
                     </div>
-                    <div className="pt-2 border-t border-slate-50 flex justify-between items-center gap-2">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 shrink-0">
-                        Katungkulan:
-                      </span>
-                      <span className="text-[11px] bg-slate-50 text-blue-600 border border-slate-100 font-extrabold px-3 py-1 rounded-xl truncate">
-                        {off.position}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </main>
       </div>
 
-      {/* 3. POPUP MODAL: CITIZEN REQUEST ENTRY FORM */}
+      {/* 3. CORE POPUP MODAL DIALOGUE FRAME: CITIZEN ENTRY ENGINE */}
       {selectedService && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md p-6 border border-slate-200 shadow-2xl relative space-y-4">
+          <div className="bg-white rounded-2xl w-full max-w-md p-6 border border-slate-200 shadow-2xl relative space-y-4 animate-in fade-in zoom-in-95 duration-150">
             <div>
-              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide">
+              <h3 className="text-sm font-black text-slate-900 uppercase tracking-wide font-mono">
                 Bagong Request: {selectedService.name}
               </h3>
-              <p className="text-slate-400 text-[11px] mt-0.5">
-                Isumite ang detalye para sa mabilisang pagproseso.
+              <p className="text-slate-400 text-[11px] mt-0.5 font-medium">
+                Isumite ang detalye sa ibaba para sa mabilisang pagproseso sa
+                LGU.
               </p>
             </div>
 
             <form
               onSubmit={handleCreateRequest}
-              className="space-y-3.5 text-xs font-bold"
+              className="space-y-4 text-xs font-bold"
             >
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] text-slate-400 uppercase mb-1">
+                  <label className="block text-[10px] text-slate-400 uppercase mb-1 tracking-wider font-mono">
                     Pangalan (First Name)
                   </label>
                   <input
@@ -511,11 +555,11 @@ export default function App() {
                     type="text"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium focus:border-slate-400"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold focus:border-slate-400 focus:bg-white transition-all text-slate-900"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] text-slate-400 uppercase mb-1">
+                  <label className="block text-[10px] text-slate-400 uppercase mb-1 tracking-wider font-mono">
                     Apelyido (Last Name)
                   </label>
                   <input
@@ -523,14 +567,14 @@ export default function App() {
                     type="text"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium focus:border-slate-400"
+                    className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold focus:border-slate-400 focus:bg-white transition-all text-slate-900"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 uppercase mb-1">
-                  Mobile Number (Para sa SMS update)
+                <label className="block text-[10px] text-slate-400 uppercase mb-1 tracking-wider font-mono">
+                  Mobile Number (Para sa SMS Update)
                 </label>
                 <input
                   required
@@ -538,36 +582,42 @@ export default function App() {
                   placeholder="Hal. 09123456789"
                   value={contactNumber}
                   onChange={(e) => setContactNumber(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-mono font-medium focus:border-slate-400"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-mono font-bold focus:border-slate-400 focus:bg-white transition-all text-slate-900 placeholder-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] text-slate-400 uppercase mb-1">
+                <label className="block text-[10px] text-slate-400 uppercase mb-1 tracking-wider font-mono">
                   Dahilan ng Pagkuha (Purpose)
                 </label>
                 <textarea
                   required
                   rows={3}
-                  placeholder="Hal. Local Employment, Scholarship, atbp."
+                  placeholder="Hal. Local Employment, Scholarship requirement, Passport Application, atbp."
                   value={purpose}
                   onChange={(e) => setPurpose(e.target.value)}
-                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium resize-none focus:border-slate-400"
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-semibold resize-none focus:border-slate-400 focus:bg-white transition-all text-slate-900 placeholder-slate-400 leading-relaxed"
                 />
               </div>
 
-              <div className="flex items-center gap-2.5 pt-2">
+              <div className="flex items-center gap-2 pt-2">
                 <button
                   type="submit"
                   disabled={submittingRequest}
-                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl transition-all border-none outline-none cursor-pointer disabled:opacity-50"
+                  className="flex-1 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-black uppercase tracking-wider rounded-xl transition-all border-none outline-none cursor-pointer disabled:opacity-50 font-mono"
                 >
                   {submittingRequest ? "Ipinapadala..." : "Isumite ang Request"}
                 </button>
                 <button
                   type="button"
-                  onClick={() => setSelectedService(null)}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold rounded-xl transition-all border-none outline-none cursor-pointer"
+                  onClick={() => {
+                    setSelectedService(null);
+                    setFirstName("");
+                    setLastName("");
+                    setContactNumber("");
+                    setPurpose("");
+                  }}
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold uppercase rounded-xl transition-all border-none outline-none cursor-pointer"
                 >
                   Kanselahin
                 </button>
@@ -577,13 +627,17 @@ export default function App() {
         </div>
       )}
 
-      {/* 4. MOBILE SYSTEM NAVIGATION */}
-      <nav className="md:hidden bg-white border-t border-slate-200 h-16 flex flex-row items-center justify-between px-2 fixed bottom-0 inset-x-0 z-40 shadow-lg">
+      {/* 4. MOBILE PERSISTENT BOTTOM NAVIGATION FOOTER */}
+      <nav className="md:hidden bg-white border-t border-slate-200 h-16 flex flex-row items-center justify-between px-2 fixed bottom-0 inset-x-0 z-40 shadow-xl shrink-0">
         {navigationTabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 flex flex-col items-center justify-center h-full text-[9px] uppercase tracking-wider cursor-pointer border-none bg-transparent outline-none transition-all duration-150 ${activeTab === tab.id ? "text-blue-600 font-black bg-slate-50" : "text-slate-400 font-bold"}`}
+            className={`flex-1 flex flex-col items-center justify-center h-full text-[9px] font-black uppercase tracking-wider cursor-pointer border-none bg-transparent outline-none transition-all duration-100 ${
+              activeTab === tab.id
+                ? "text-blue-600 bg-slate-50/60 font-black rounded-xl"
+                : "text-slate-400 font-bold"
+            }`}
           >
             <span className="block truncate text-center w-full px-0.5">
               {tab.id === "home"
